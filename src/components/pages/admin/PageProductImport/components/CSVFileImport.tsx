@@ -1,6 +1,8 @@
 import React from "react";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 type CSVFileImportProps = {
   url: string;
@@ -23,7 +25,6 @@ export default function CSVFileImport({ url, title }: CSVFileImportProps) {
   };
 
   const uploadFile = async () => {
-
     // Get the presigned URL
     if (!file) {
       return;
@@ -33,10 +34,20 @@ export default function CSVFileImport({ url, title }: CSVFileImportProps) {
         "?" +
         new URLSearchParams({
           name: file.name,
-        })
+        }),
+      {
+        headers: {
+          Authorization: `Basic ${localStorage.getItem("authorization_token")}`,
+        },
+      }
     );
 
     const data = await response?.json();
+
+    if (!response.ok) {
+      toast.error(data.message);
+      return;
+    }
     console.log("File to upload: ", file.name);
     console.log("Uploading to: ", data.url);
     const result = await fetch(data.url, {
@@ -45,6 +56,9 @@ export default function CSVFileImport({ url, title }: CSVFileImportProps) {
     });
     console.log("Result: ", result);
     setFile(null);
+    if (result.ok) {
+      toast.success("Products have been imported");
+    }
   };
   return (
     <Box>
@@ -59,6 +73,7 @@ export default function CSVFileImport({ url, title }: CSVFileImportProps) {
           <button onClick={uploadFile}>Upload file</button>
         </div>
       )}
+      <ToastContainer />
     </Box>
   );
 }
