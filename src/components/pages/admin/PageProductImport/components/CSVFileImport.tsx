@@ -1,6 +1,8 @@
 import React from "react";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 type CSVFileImportProps = {
   url: string;
@@ -22,29 +24,60 @@ export default function CSVFileImport({ url, title }: CSVFileImportProps) {
     setFile(undefined);
   };
 
-  const uploadFile = async () => {
+  const token = localStorage.getItem("authorization_token");
+  let headers = {};
+  if (token) {
+    headers = {
+      Authorization: `Basic ${token}`,
+    };
+  }
 
+  const uploadFile = async () => {
     // Get the presigned URL
     if (!file) {
       return;
     }
-    const response = await fetch(
-      url +
-        "?" +
-        new URLSearchParams({
-          name: file.name,
-        })
-    );
+    try {
+      const response = await fetch(
+        url +
+          "?" +
+          new URLSearchParams({
+            name: file.name,
+          }),
+        {
+          headers,
+        }
+      );
+      if (!response.ok) {
+        console.log("!response.ok");
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-    const data = await response?.json();
-    console.log("File to upload: ", file.name);
-    console.log("Uploading to: ", data.url);
-    const result = await fetch(data.url, {
-      method: "PUT",
-      body: file,
-    });
-    console.log("Result: ", result);
-    setFile(null);
+      const data = await response?.json();
+
+      console.log("File to upload: ", file.name);
+      console.log("Uploading to: ", data.url);
+      const result = await fetch(data.url, {
+        method: "PUT",
+        body: file,
+      });
+      console.log("Result: ", result);
+      setFile(null);
+      if (result.ok) {
+        toast.success("Products have been imported");
+      }
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.log("Error: ", error.message);
+        toast.error(
+          "Error: Unauthorized access. Please provide valid credentials"
+        );
+      } else {
+        console.log("Error: ", error);
+        toast.error("Error: An unexpected error has occurred.");
+      }
+      return;
+    }
   };
   return (
     <Box>
@@ -59,6 +92,7 @@ export default function CSVFileImport({ url, title }: CSVFileImportProps) {
           <button onClick={uploadFile}>Upload file</button>
         </div>
       )}
+      <ToastContainer />
     </Box>
   );
 }
